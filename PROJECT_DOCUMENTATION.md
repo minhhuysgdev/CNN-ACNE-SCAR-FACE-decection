@@ -4,13 +4,16 @@
 
 **Mục tiêu:** Xây dựng mô hình deep learning sử dụng CNN để phân loại các loại mụn, đồng thời giải quyết vấn đề mất cân bằng dữ liệu thông qua oversampling và data augmentation.
 
-**Dataset:** Acne Dataset Image từ Kaggle (tiswan14/acne-dataset-image)
+**Dataset:** 
+- Acne Dataset Image từ Kaggle (tiswan14/acne-dataset-image)
+- Face Scar Dataset từ Kaggle (nayanchaure/face-scar) - đã merge vào
 
-**Số lớp phân loại:** 5 loại mụn
+**Số lớp phân loại:** 6 loại (đã thêm Scar)
 - Blackheads (Mụn đầu đen)
 - Cyst (Mụn nang)
 - Papules (Mụn sần)
 - Pustules (Mụn mủ)
+- Scar (Sẹo)
 - Whiteheads (Mụn đầu trắng)
 
 ---
@@ -30,20 +33,23 @@
   - `numpy`, `matplotlib` cho xử lý dữ liệu và visualization
   - `sklearn` cho class weights computation
 
-### **Cell 5-8:** Tải và Thiết Lập Dataset
-- **Cell 6:** Tải dataset từ Kaggle sử dụng `kagglehub`
-- **Cell 8:** Định nghĩa các đường dẫn:
+### **Cell 5-10:** Tải và Thiết Lập Dataset
+- **Cell 5:** Tải 2 datasets từ Kaggle sử dụng `kagglehub`:
+  - Acne Dataset Image (tiswan14/acne-dataset-image)
+  - Face Scar Dataset (nayanchaure/face-scar)
+- **Cell 7-10:** Merge dataset Scar vào train/valid/test với tỷ lệ 70/15/15
+- **Cell 10:** Định nghĩa các đường dẫn:
   - `base_dir`: Thư mục gốc chứa dataset
   - `train_dir`: Thư mục training set
   - `valid_dir`: Thư mục validation set
   - `test_dir`: Thư mục test set
 
-### **Cell 10-11:** Load Datasets
+### **Cell 15:** Load Datasets
 - **Thông số:**
   - `BATCH_SIZE = 32`
   - `IMAGE_SIZE = 128` (128x128 pixels)
 - Load datasets với `image_dataset_from_directory`
-- Xác định `class_names` từ dataset
+- Xác định `class_names` từ dataset (6 classes sau khi merge Scar)
 
 ### **Cell 12-13:** Visualization
 - Hiển thị 9 ảnh mẫu từ training set
@@ -95,7 +101,7 @@ Sequential Model:
 ├── Flatten()
 ├── Dense(128 units) + ReLU + L2 Regularization (0.001)
 ├── Dropout(0.5)
-└── Dense(5 units) + Softmax
+└── Dense(6 units) + Softmax  # Đã cập nhật từ 5 lên 6 classes
 ```
 
 #### **Thông Số Compile:**
@@ -132,15 +138,20 @@ Sequential Model:
 - **Confusion Matrix:** Ma trận nhầm lẫn để phân tích lỗi phân loại
 - **Classification Report:** Báo cáo chi tiết về precision, recall, F1-score cho từng lớp
 
-### **Cell 37-38:** Visualization Training History
+### **Cell 42-43:** Visualization Training History
 - Vẽ biểu đồ accuracy và loss qua các epochs
 - So sánh training và validation metrics
+
+### **Cell 45-48:** Test với Ảnh Mới
+- **Cell 45:** Load và preprocess ảnh từ đường dẫn
+- **Cell 46:** Predict với model đã train và hiển thị kết quả với visualization
+- **Cell 48:** Hàm helper `predict_acne_type()` để test nhanh với bất kỳ ảnh nào
 
 ---
 
 ## 📊 Thông Số Dataset
 
-### **Phân Phối Dữ Liệu:**
+### **Phân Phối Dữ Liệu (Sau khi merge Scar):**
 
 | Class | Train | Validation | Test | Total |
 |-------|-------|------------|------|-------|
@@ -148,17 +159,19 @@ Sequential Model:
 | **Cyst** | 645 | 206 | 189 | 1,040 |
 | **Papules** | 621 | 209 | 202 | 1,032 |
 | **Pustules** | 584 | 217 | 205 | 1,006 |
+| **Scar** | 4,876 | 1,044 | 1,048 | 6,968 |
 | **Whiteheads** | 193 | 49 | 57 | 299 |
-| **TOTAL** | **2,778** | **921** | **918** | **4,617** |
+| **TOTAL** | **7,654** | **1,965** | **1,966** | **11,585** |
 
 ### **Vấn Đề Mất Cân Bằng:**
 - Whiteheads chỉ có 193 ảnh trong training set (lớp thiểu số)
-- Blackheads có 735 ảnh (lớp đa số nhất)
-- Tỷ lệ: ~3.8:1 (Blackheads:Whiteheads)
+- Scar có 4,876 ảnh (lớp đa số nhất sau khi merge)
+- Tỷ lệ: ~25:1 (Scar:Whiteheads)
+- Papules có performance thấp nhất trong test set (Recall = 0.25)
 
 ### **Giải Pháp:**
-1. **Oversampling:** Tăng số lượng Whiteheads lên ~735 (bằng với Blackheads)
-2. **Class Weights:** Áp dụng trọng số cao hơn cho Whiteheads (2.88)
+1. **Oversampling:** Tăng số lượng Whiteheads lên ~4,876 (bằng với Scar)
+2. **Class Weights:** Áp dụng trọng số tự động tính từ phân phối thực tế
 3. **Data Augmentation:** Tăng đa dạng dữ liệu cho tất cả các lớp
 
 ---
@@ -190,7 +203,7 @@ Sequential Model:
 | Flatten | - | - | - | - |
 | Dense_1 | 128 | ReLU | L2(0.001) | - |
 | Dropout | - | - | - | 0.5 |
-| Dense_2 (Output) | 5 | Softmax | - | - |
+| Dense_2 (Output) | 6 | Softmax | - | - |
 
 ### **Tổng Số Tham Số:**
 - Cần chạy `model.summary()` để xem chi tiết số lượng parameters
@@ -215,13 +228,14 @@ Sequential Model:
 - **Optimizer:** Adam
 - **Initial Learning Rate:** 0.001
 - **Loss Function:** Sparse Categorical Crossentropy
-- **Max Epochs:** 50
-- **Class Weights:**
-  - Blackheads: 0.756
-  - Cyst: 0.861
-  - Papules: 0.895
-  - Pustules: 0.951
-  - Whiteheads: 2.879
+- **Max Epochs:** 50 (có thể dừng sớm nếu EarlyStopping kích hoạt)
+- **Class Weights (tự động tính từ dataset sau merge):**
+  - Blackheads: 1.736
+  - Cyst: 1.978
+  - Papules: 2.054
+  - Pustules: 2.184
+  - Scar: 0.262
+  - Whiteheads: 6.610
 
 ### **Callbacks Parameters:**
 - **EarlyStopping:**
@@ -245,26 +259,30 @@ Sequential Model:
 ## 📈 Kết Quả Mô Hình
 
 ### **Test Performance:**
-- **Test Accuracy:** 63.29%
-- **Test Loss:** 0.868
+- **Test Accuracy:** 74.00%
+- **Total Support:** 1,966 ảnh trong test set
 
 ### **Classification Report:**
 
 | Class | Precision | Recall | F1-Score | Support |
 |-------|-----------|--------|----------|---------|
-| **Blackheads** | 0.78 | 0.65 | 0.71 | 265 |
-| **Cyst** | 0.61 | 0.71 | 0.66 | 189 |
-| **Papules** | 0.53 | 0.60 | 0.56 | 202 |
-| **Pustules** | 0.53 | 0.47 | 0.50 | 205 |
-| **Whiteheads** | 0.89 | 0.98 | 0.93 | 57 |
-| **Macro Avg** | 0.67 | 0.68 | 0.67 | 918 |
-| **Weighted Avg** | 0.64 | 0.63 | 0.63 | 918 |
+| **Blackheads** | 0.55 | 0.59 | 0.57 | 265 |
+| **Cyst** | 0.43 | 0.80 | 0.56 | 189 |
+| **Papules** | 0.57 | 0.25 | 0.34 | 202 |
+| **Pustules** | 0.56 | 0.48 | 0.51 | 205 |
+| **Scar** | 0.98 | 0.90 | 0.94 | 1,048 |
+| **Whiteheads** | 0.60 | 0.98 | 0.75 | 57 |
+| **Macro Avg** | 0.61 | 0.67 | 0.61 | 1,966 |
+| **Weighted Avg** | 0.77 | 0.74 | 0.74 | 1,966 |
 
 ### **Nhận Xét:**
-- ✅ **Whiteheads** có performance tốt nhất (F1 = 0.93) - nhờ oversampling và class weights
-- ✅ **Blackheads** có precision cao (0.78) nhưng recall thấp hơn (0.65)
-- ⚠️ **Papules** và **Pustules** có performance thấp hơn, có thể do đặc điểm tương đồng
-- 📊 Overall accuracy: 63% - Có thể cải thiện thêm
+- ✅ **Scar** có performance tốt nhất (F1 = 0.94, Precision = 0.98) - class lớn nhất và dễ phân biệt
+- ✅ **Whiteheads** có recall rất cao (0.98) nhưng precision thấp (0.60) - nhiều false positive
+- ✅ **Cyst** có recall cao (0.80) nhưng precision thấp (0.43) - nhiều false positive
+- ⚠️ **Papules** có performance thấp nhất (F1 = 0.34, Recall = 0.25) - bỏ sót nhiều ảnh (75%)
+- ⚠️ **Blackheads** và **Pustules** có performance trung bình
+- 📊 Overall accuracy: 74% - cải thiện từ 63% sau khi thêm dataset Scar
+- 📊 Weighted F1-score: 0.74 - tốt hơn do Scar chiếm tỷ trọng lớn trong dataset
 
 ---
 
@@ -288,6 +306,12 @@ Sequential Model:
 - ✅ Dataset caching
 - ✅ Prefetch để tăng tốc độ training
 - ✅ Batch processing
+- ✅ Parallel processing cho data augmentation
+
+### **5. Tối Ưu Hóa Tốc Độ Training:**
+- ✅ GPU Metal (MPS) cho Mac Apple Silicon - nhanh hơn 5-10x so với CPU (nếu có)
+- ✅ Mixed Precision Training (float16) - giảm memory và tăng tốc độ 2x (nếu có GPU)
+- ✅ Dataset pipeline optimization với prefetch và caching
 
 ---
 

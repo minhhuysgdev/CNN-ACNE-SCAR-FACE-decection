@@ -27,81 +27,90 @@
 - Mô tả mục tiêu của dự án
 
 ### **Cell 2-4:** Import Libraries và Setup
-- **Cell 3:** Cài đặt `kagglehub` để tải dataset
+- **Cell 2:** Cài đặt các thư viện cần thiết (`pip install`)
+- **Cell 3:** Header section cho imports
 - **Cell 4:** Import các thư viện cần thiết:
   - `tensorflow` và `keras` cho deep learning
   - `numpy`, `matplotlib` cho xử lý dữ liệu và visualization
   - `sklearn` cho class weights computation
+  - `kagglehub` để tải dataset
 
-### **Cell 5-10:** Tải và Thiết Lập Dataset
-- **Cell 5:** Tải 2 datasets từ Kaggle sử dụng `kagglehub`:
+### **Cell 6-12:** Tải và Thiết Lập Dataset
+- **Cell 6:** Tải 2 datasets từ Kaggle sử dụng `kagglehub`:
   - Acne Dataset Image (tiswan14/acne-dataset-image)
   - Face Scar Dataset (nayanchaure/face-scar)
-- **Cell 7-10:** Merge dataset Scar vào train/valid/test với tỷ lệ 70/15/15
-- **Cell 10:** Định nghĩa các đường dẫn:
-  - `base_dir`: Thư mục gốc chứa dataset
-  - `train_dir`: Thư mục training set
-  - `valid_dir`: Thư mục validation set
-  - `test_dir`: Thư mục test set
+- **Cell 9:** Kiểm tra cấu trúc dataset face-scar
+- **Cell 10:** Reset - Xóa tất cả ảnh Scar đã copy trước đó (tránh duplicate)
+- **Cell 12:** Merge dataset Scar vào train/valid/test với tỷ lệ 70/15/15
+  - Định nghĩa các đường dẫn:
+    - `base_dir`: Thư mục gốc chứa dataset
+    - `train_dir`: Thư mục training set
+    - `valid_dir`: Thư mục validation set
+    - `test_dir`: Thư mục test set
+- **Cell 13:** Kiểm tra lại số lượng ảnh sau khi merge
 
-### **Cell 15:** Load Datasets
+### **Cell 17:** Load Datasets
 - **Thông số:**
   - `BATCH_SIZE = 32`
   - `IMAGE_SIZE = 128` (128x128 pixels)
 - Load datasets với `image_dataset_from_directory`
 - Xác định `class_names` từ dataset (6 classes sau khi merge Scar)
 
-### **Cell 12-13:** Visualization
+### **Cell 19:** Visualization
 - Hiển thị 9 ảnh mẫu từ training set
 
-### **Cell 14-16:** Phân Tích Phân Phối Dữ Liệu
+### **Cell 21-22:** Phân Tích Phân Phối Dữ Liệu
 - Đếm số lượng ảnh trong mỗi lớp
 - Nhận xét về sự mất cân bằng dữ liệu
 
-### **Cell 17-18:** Tính Class Weights
+### **Cell 24:** Tính Class Weights
 - Sử dụng `compute_class_weight` với strategy 'balanced'
 - Tính toán trọng số cho từng lớp để xử lý imbalance
 
-### **Cell 19-20:** Preprocessing
+### **Cell 26:** Preprocessing
 - Normalization: Rescaling pixel values về [0, 1] bằng cách chia cho 255
 
-### **Cell 21-22:** Data Augmentation
+### **Cell 28:** Data Augmentation
 - **Các kỹ thuật augmentation:**
   - `RandomFlip`: Lật ngang và dọc
   - `RandomRotation`: Xoay với góc ±15% (0.15)
   - `RandomZoom`: Zoom với tỷ lệ ±15% (0.15)
 
-### **Cell 23-25:** Oversampling
+### **Cell 30:** Oversampling
 - Xử lý lớp thiểu số (Whiteheads) bằng cách:
   - Tách dataset theo từng lớp
-  - Lặp lại lớp Whiteheads để đạt số lượng bằng lớp đa số nhất
+  - Tự động tìm minority class (class có số lượng ít nhất)
+  - Lặp lại lớp thiểu số để đạt số lượng bằng lớp đa số nhất
   - Kết hợp lại và shuffle
   - Áp dụng data augmentation
   - Batch và prefetch để tối ưu performance
 
-### **Cell 26:** Tối Ưu Dataset
+### **Cell 32:** Tối Ưu Dataset
 - Cache và prefetch cho validation và test sets
 
-### **Cell 27-28:** Xây Dựng Mô Hình CNN
+### **Cell 33-34:** Xây Dựng Mô Hình CNN (Đã Cải Tiến)
 
 #### **Kiến Trúc Mô Hình:**
 
 ```
-Sequential Model:
+Sequential Model (Cải Tiến):
 ├── Conv2D(32 filters, 3x3) + ReLU
+├── BatchNormalization()  # ✅ Cải tiến
 ├── MaxPooling2D(2x2)
 ├── Conv2D(64 filters, 3x3) + ReLU
+├── BatchNormalization()  # ✅ Cải tiến
 ├── MaxPooling2D(2x2)
 ├── Conv2D(128 filters, 3x3) + ReLU
-├── MaxPooling2D(2x2)
-├── Conv2D(128 filters, 3x3) + ReLU
+├── BatchNormalization()  # ✅ Cải tiến
 ├── MaxPooling2D(2x2)
 ├── Conv2D(256 filters, 3x3) + ReLU
+├── BatchNormalization()  # ✅ Cải tiến
 ├── MaxPooling2D(2x2)
-├── Flatten()
-├── Dense(128 units) + ReLU + L2 Regularization (0.001)
+├── GlobalAveragePooling2D()  # ✅ Thay Flatten (giảm parameters)
+├── Dense(256 units) + ReLU + L2 Regularization (0.001)  # ✅ Tăng từ 128
+├── BatchNormalization()  # ✅ Cải tiến
 ├── Dropout(0.5)
-└── Dense(6 units) + Softmax  # Đã cập nhật từ 5 lên 6 classes
+└── Dense(6 units) + Softmax
 ```
 
 #### **Thông Số Compile:**
@@ -109,7 +118,7 @@ Sequential Model:
 - **Loss Function:** Sparse Categorical Crossentropy
 - **Metrics:** Accuracy
 
-### **Cell 29-30:** Training
+### **Cell 37:** Training
 
 #### **Callbacks:**
 1. **EarlyStopping:**
@@ -130,28 +139,28 @@ Sequential Model:
 - **Class Weights:** Áp dụng để xử lý imbalance
 - **Verbose:** 2 (hiển thị một dòng mỗi epoch)
 
-### **Cell 31-32:** Đánh Giá Mô Hình
+### **Cell 39:** Đánh Giá Mô Hình
 - Evaluate trên test set
 - Tính test accuracy và loss
 
-### **Cell 33-36:** Phân Tích Kết Quả
-- **Confusion Matrix:** Ma trận nhầm lẫn để phân tích lỗi phân loại
-- **Classification Report:** Báo cáo chi tiết về precision, recall, F1-score cho từng lớp
+### **Cell 41-43:** Phân Tích Kết Quả
+- **Cell 41:** Thu thập predictions và true labels từ test set
+- **Cell 42:** **Confusion Matrix** - Ma trận nhầm lẫn để phân tích lỗi phân loại
+- **Cell 43:** **Classification Report** - Báo cáo chi tiết về precision, recall, F1-score cho từng lớp
 
-### **Cell 42-43:** Visualization Training History
+### **Cell 45:** Visualization Training History
 - Vẽ biểu đồ accuracy và loss qua các epochs
 - So sánh training và validation metrics
 
-### **Cell 45-48:** Test với Ảnh Mới
-- **Cell 45:** Load và preprocess ảnh từ đường dẫn
-- **Cell 46:** Predict với model đã train và hiển thị kết quả với visualization
-- **Cell 48:** Hàm helper `predict_acne_type()` để test nhanh với bất kỳ ảnh nào
+### **Cell 47-48:** Test với Ảnh Mới
+- **Cell 47:** Test với ảnh Blackheads - Load, preprocess, predict và hiển thị kết quả với visualization
+- **Cell 48:** Test với ảnh Scar - Tương tự Cell 47
 
 ---
 
 ## 📊 Thông Số Dataset
 
-### **Phân Phối Dữ Liệu (Sau khi merge Scar):**
+### **Phân Phối Dữ Liệu (Sau khi merge Scar và reset):**
 
 | Class | Train | Validation | Test | Total |
 |-------|-------|------------|------|-------|
@@ -159,15 +168,15 @@ Sequential Model:
 | **Cyst** | 645 | 206 | 189 | 1,040 |
 | **Papules** | 621 | 209 | 202 | 1,032 |
 | **Pustules** | 584 | 217 | 205 | 1,006 |
-| **Scar** | 4,876 | 1,044 | 1,048 | 6,968 |
+| **Scar** | 1,219 | 261 | 262 | 1,742 |
 | **Whiteheads** | 193 | 49 | 57 | 299 |
-| **TOTAL** | **7,654** | **1,965** | **1,966** | **11,585** |
+| **TOTAL** | **3,997** | **1,182** | **1,180** | **6,359** |
 
 ### **Vấn Đề Mất Cân Bằng:**
 - Whiteheads chỉ có 193 ảnh trong training set (lớp thiểu số)
-- Scar có 4,876 ảnh (lớp đa số nhất sau khi merge)
-- Tỷ lệ: ~25:1 (Scar:Whiteheads)
-- Papules có performance thấp nhất trong test set (Recall = 0.25)
+- Scar có 1,219 ảnh (lớp đa số nhất sau khi merge)
+- Tỷ lệ: ~6.3:1 (Scar:Whiteheads)
+- Papules có performance thấp nhất trong test set (Recall = 0.49 sau cải tiến)
 
 ### **Giải Pháp:**
 1. **Oversampling:** Tăng số lượng Whiteheads lên ~4,876 (bằng với Scar)
@@ -186,22 +195,25 @@ Sequential Model:
 | Layer | Filters | Kernel Size | Activation | Output Shape |
 |-------|---------|-------------|------------|--------------|
 | Conv2D_1 | 32 | (3, 3) | ReLU | (126, 126, 32) |
+| BatchNormalization_1 | - | - | - | (126, 126, 32) |
 | MaxPooling2D_1 | - | (2, 2) | - | (63, 63, 32) |
 | Conv2D_2 | 64 | (3, 3) | ReLU | (61, 61, 64) |
+| BatchNormalization_2 | - | - | - | (61, 61, 64) |
 | MaxPooling2D_2 | - | (2, 2) | - | (30, 30, 64) |
 | Conv2D_3 | 128 | (3, 3) | ReLU | (28, 28, 128) |
+| BatchNormalization_3 | - | - | - | (28, 28, 128) |
 | MaxPooling2D_3 | - | (2, 2) | - | (14, 14, 128) |
-| Conv2D_4 | 128 | (3, 3) | ReLU | (12, 12, 128) |
-| MaxPooling2D_4 | - | (2, 2) | - | (6, 6, 128) |
-| Conv2D_5 | 256 | (3, 3) | ReLU | (4, 4, 256) |
-| MaxPooling2D_5 | - | (2, 2) | - | (2, 2, 256) |
+| Conv2D_4 | 256 | (3, 3) | ReLU | (12, 12, 256) |
+| BatchNormalization_4 | - | - | - | (12, 12, 256) |
+| MaxPooling2D_4 | - | (2, 2) | - | (6, 6, 256) |
 
 ### **Fully Connected Layers:**
 
 | Layer | Units | Activation | Regularization | Dropout |
 |-------|-------|------------|----------------|---------|
-| Flatten | - | - | - | - |
-| Dense_1 | 128 | ReLU | L2(0.001) | - |
+| GlobalAveragePooling2D | - | - | - | - |
+| Dense_1 | 256 | ReLU | L2(0.001) | - |
+| BatchNormalization_5 | - | - | - | - |
 | Dropout | - | - | - | 0.5 |
 | Dense_2 (Output) | 6 | Softmax | - | - |
 
@@ -229,13 +241,13 @@ Sequential Model:
 - **Initial Learning Rate:** 0.001
 - **Loss Function:** Sparse Categorical Crossentropy
 - **Max Epochs:** 50 (có thể dừng sớm nếu EarlyStopping kích hoạt)
-- **Class Weights (tự động tính từ dataset sau merge):**
-  - Blackheads: 1.736
-  - Cyst: 1.978
-  - Papules: 2.054
-  - Pustules: 2.184
-  - Scar: 0.262
-  - Whiteheads: 6.610
+- **Class Weights (tự động tính từ dataset sau merge và reset):**
+  - Blackheads: 0.906
+  - Cyst: 1.033
+  - Papules: 1.073
+  - Pustules: 1.141
+  - Scar: 0.546
+  - Whiteheads: 3.452
 
 ### **Callbacks Parameters:**
 - **EarlyStopping:**
@@ -256,33 +268,35 @@ Sequential Model:
 
 ---
 
-## 📈 Kết Quả Mô Hình
+## 📈 Kết Quả Mô Hình (Sau Cải Tiến)
 
 ### **Test Performance:**
-- **Test Accuracy:** 74.00%
-- **Total Support:** 1,966 ảnh trong test set
+- **Test Accuracy:** 76.02%
+- **Total Support:** 1,180 ảnh trong test set
 
 ### **Classification Report:**
 
 | Class | Precision | Recall | F1-Score | Support |
 |-------|-----------|--------|----------|---------|
-| **Blackheads** | 0.55 | 0.59 | 0.57 | 265 |
-| **Cyst** | 0.43 | 0.80 | 0.56 | 189 |
-| **Papules** | 0.57 | 0.25 | 0.34 | 202 |
-| **Pustules** | 0.56 | 0.48 | 0.51 | 205 |
-| **Scar** | 0.98 | 0.90 | 0.94 | 1,048 |
-| **Whiteheads** | 0.60 | 0.98 | 0.75 | 57 |
-| **Macro Avg** | 0.61 | 0.67 | 0.61 | 1,966 |
-| **Weighted Avg** | 0.77 | 0.74 | 0.74 | 1,966 |
+| **Blackheads** | 0.75 | 0.82 | 0.78 | 265 |
+| **Cyst** | 0.68 | 0.83 | 0.75 | 189 |
+| **Papules** | 0.64 | 0.49 | 0.55 | 202 |
+| **Pustules** | 0.68 | 0.60 | 0.64 | 205 |
+| **Scar** | 0.95 | 0.94 | 0.95 | 262 |
+| **Whiteheads** | 0.82 | 0.96 | 0.89 | 57 |
+| **Macro Avg** | 0.75 | 0.77 | 0.76 | 1,180 |
+| **Weighted Avg** | 0.76 | 0.76 | 0.75 | 1,180 |
 
 ### **Nhận Xét:**
-- ✅ **Scar** có performance tốt nhất (F1 = 0.94, Precision = 0.98) - class lớn nhất và dễ phân biệt
-- ✅ **Whiteheads** có recall rất cao (0.98) nhưng precision thấp (0.60) - nhiều false positive
-- ✅ **Cyst** có recall cao (0.80) nhưng precision thấp (0.43) - nhiều false positive
-- ⚠️ **Papules** có performance thấp nhất (F1 = 0.34, Recall = 0.25) - bỏ sót nhiều ảnh (75%)
-- ⚠️ **Blackheads** và **Pustules** có performance trung bình
-- 📊 Overall accuracy: 74% - cải thiện từ 63% sau khi thêm dataset Scar
-- 📊 Weighted F1-score: 0.74 - tốt hơn do Scar chiếm tỷ trọng lớn trong dataset
+- ✅ **Scar** có performance tốt nhất (F1 = 0.95, Precision = 0.95) - class lớn nhất và dễ phân biệt
+- ✅ **Whiteheads** có recall rất cao (0.96) và precision tốt (0.82) - cải thiện đáng kể
+- ✅ **Cyst** có recall cao (0.83) và precision tốt hơn (0.68) - cải thiện từ 0.43
+- ✅ **Blackheads** có performance tốt (F1 = 0.78) - cải thiện từ 0.57
+- ⚠️ **Papules** vẫn có performance thấp nhất (F1 = 0.55, Recall = 0.49) - nhưng đã cải thiện từ 0.34
+- ⚠️ **Pustules** có performance trung bình (F1 = 0.64) - cải thiện từ 0.51
+- 📊 Overall accuracy: 76% - **cải thiện 2%** so với model trước (74%)
+- 📊 Macro F1-score: 0.76 - **cải thiện 0.15** so với model trước (0.61)
+- 📊 Weighted F1-score: 0.75 - tương đương model trước nhưng với dataset đã reset
 
 ---
 
@@ -296,6 +310,7 @@ Sequential Model:
 ### **2. Regularization:**
 - ✅ L2 Regularization (0.001) trong Dense layer
 - ✅ Dropout (0.5) để giảm overfitting
+- ✅ BatchNormalization sau mỗi Conv2D và Dense layer - giúp training ổn định và nhanh hơn
 
 ### **3. Optimization:**
 - ✅ Adam optimizer với adaptive learning rate
@@ -325,16 +340,11 @@ Sequential Model:
 
 ---
 
-## 🚀 Hướng Phát Triển
-
-### **Có thể cải thiện:**
-1. **Tăng kích thước ảnh:** Thử `IMAGE_SIZE = 224` hoặc `256`
-2. **Transfer Learning:** Sử dụng pre-trained models (VGG16, ResNet50, EfficientNet)
-3. **Tinh chỉnh kiến trúc:** Thêm BatchNormalization, GlobalAveragePooling2D
-4. **Ensemble Methods:** Kết hợp nhiều mô hình
-5. **Tăng số lượng dữ liệu:** Thu thập thêm dữ liệu, đặc biệt cho các lớp có performance thấp
-6. **Hyperparameter Tuning:** Tối ưu learning rate, batch size, dropout rate
-7. **Advanced Augmentation:** Thêm các kỹ thuật như color jittering, elastic transformation
+### **Đã thực hiện:**
+- ✅ **BatchNormalization:** Đã thêm sau mỗi Conv2D và Dense layer
+- ✅ **GlobalAveragePooling2D:** Đã thay thế Flatten để giảm parameters
+- ✅ **Tăng Dense units:** Từ 128 lên 256 để tăng capacity
+- ✅ **Reset dataset:** Đã xóa duplicate Scar images
 
 ---
 
